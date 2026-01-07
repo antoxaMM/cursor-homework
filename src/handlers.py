@@ -6,6 +6,9 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message
 import logging
+import os
+
+from src.llm import get_llm_response
 
 # Create router for handlers
 router = Router()
@@ -37,9 +40,9 @@ async def cmd_start(message: Message) -> None:
 
 
 @router.message(F.text)
-async def echo_text(message: Message) -> None:
+async def handle_text(message: Message) -> None:
     """
-    Echo back text messages from user.
+    Process text message with LLM and send response.
     
     Args:
         message: Incoming text message from user
@@ -49,8 +52,25 @@ async def echo_text(message: Message) -> None:
     
     logger.info(f"Received text from @{username} (ID: {user.id}): {message.text}")
     
-    # Echo the message back
-    await message.answer(message.text)
+    # Get system prompt from environment
+    system_prompt = os.getenv("SYSTEM_PROMPT", "Вы - полезный ИИ-ассистент.")
+    
+    try:
+        # Get response from LLM
+        llm_response = get_llm_response(message.text, system_prompt)
+        
+        # Send LLM response to user
+        await message.answer(llm_response)
+        
+    except Exception as e:
+        logger.error(f"Error getting LLM response: {e}", exc_info=True)
+        
+        # Send user-friendly error message
+        error_message = (
+            "Извините, произошла ошибка при обработке вашего запроса. "
+            "Попробуйте чуть позже."
+        )
+        await message.answer(error_message)
 
 
 @router.message()
