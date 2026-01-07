@@ -137,7 +137,10 @@ async def handle_text(message: Message) -> None:
         if conversation_history[chat_id] and conversation_history[chat_id][-1]["role"] == "user":
             conversation_history[chat_id].pop()
         
-        logger.error(f"Error getting LLM response: {e}", exc_info=True)
+        logger.error(
+            f"Error getting LLM response for @{username} (chat_id: {chat_id}): {e}",
+            exc_info=True
+        )
         
         # Send user-friendly error message
         error_message = (

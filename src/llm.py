@@ -4,6 +4,7 @@ LLM integration with OpenRouter via OpenAI SDK.
 
 import os
 import logging
+import time
 from openai import OpenAI
 from typing import Optional
 
@@ -66,6 +67,7 @@ def get_llm_response(
     temperature = float(os.getenv("LLM_TEMPERATURE", "0.7"))
     max_tokens = int(os.getenv("LLM_MAX_TOKENS", "500"))
     history_limit = int(os.getenv("CONVERSATION_HISTORY_LIMIT", "10"))
+    retry_attempts = int(os.getenv("LLM_RETRY_ATTEMPTS", "3"))
     
     # Build messages list for LLM
     messages = [{"role": "system", "content": system_prompt}]
@@ -82,24 +84,44 @@ def get_llm_response(
     
     logger.info(f"Sending request to LLM (model: {model}, total messages: {len(messages)})")
     
-    try:
-        # Create chat completion request
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
-        
-        # Extract response text
-        assistant_message = response.choices[0].message.content
-        tokens_used = response.usage.total_tokens if response.usage else 0
-        
-        logger.info(f"LLM response received (tokens: {tokens_used})")
-        
-        return assistant_message
+    # Retry logic
+    last_error = None
     
-    except Exception as e:
-        logger.error(f"LLM API error: {e}", exc_info=True)
-        raise
+    for attempt in range(1, retry_attempts + 1):
+        try:
+            # Create chat completion request
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            
+            # Extract response text
+            assistant_message = response.choices[0].message.content
+            tokens_used = response.usage.total_tokens if response.usage else 0
+            
+            logger.info(f"LLM response received (tokens: {tokens_used})")
+            
+            return assistant_message
+        
+        except Exception as e:
+            last_error = e
+            
+            if attempt < retry_attempts:
+                # Not the last attempt - log warning and retry
+                logger.warning(
+                    f"LLM API error (attempt {attempt}/{retry_attempts}): {e}. "
+                    f"Retrying in 1 second..."
+                )
+                time.sleep(1)  # Pause before retry
+            else:
+                # Last attempt failed - log error with full traceback
+                logger.error(
+                    f"LLM API error after {retry_attempts} attempts: {e}",
+                    exc_info=True
+                )
+    
+    # All attempts failed - raise the last error
+    raise last_error
 
