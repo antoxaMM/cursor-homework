@@ -22,7 +22,7 @@ test:
 
 run:
 	@echo "Starting bot locally..."
-	uv run python -m src.bot
+	uv run python src/bot.py
 
 build:
 	@echo "Building Docker image..."
