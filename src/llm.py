@@ -40,13 +40,18 @@ def get_llm_client() -> OpenAI:
     return _client
 
 
-def get_llm_response(user_message: str, system_prompt: str) -> str:
+def get_llm_response(
+    user_message: str, 
+    system_prompt: str,
+    history: list[dict] | None = None
+) -> str:
     """
-    Get response from LLM via OpenRouter.
+    Get response from LLM via OpenRouter with conversation history.
     
     Args:
-        user_message: User's text message
+        user_message: User's current text message
         system_prompt: System prompt defining bot behavior
+        history: Previous conversation messages (optional)
         
     Returns:
         LLM response text
@@ -60,17 +65,28 @@ def get_llm_response(user_message: str, system_prompt: str) -> str:
     model = os.getenv("LLM_MODEL", "openai/gpt-3.5-turbo")
     temperature = float(os.getenv("LLM_TEMPERATURE", "0.7"))
     max_tokens = int(os.getenv("LLM_MAX_TOKENS", "500"))
+    history_limit = int(os.getenv("CONVERSATION_HISTORY_LIMIT", "10"))
     
-    logger.info(f"Sending request to LLM (model: {model})")
+    # Build messages list for LLM
+    messages = [{"role": "system", "content": system_prompt}]
+    
+    # Add conversation history with limit
+    if history:
+        # Apply limit: take last N messages
+        limited_history = history[-history_limit:] if len(history) > history_limit else history
+        messages.extend(limited_history)
+        logger.info(f"Including {len(limited_history)} messages from history (limit: {history_limit})")
+    
+    # Add current user message
+    messages.append({"role": "user", "content": user_message})
+    
+    logger.info(f"Sending request to LLM (model: {model}, total messages: {len(messages)})")
     
     try:
         # Create chat completion request
         response = client.chat.completions.create(
             model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ],
+            messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
         )
