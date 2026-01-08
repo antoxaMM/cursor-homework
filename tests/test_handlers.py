@@ -188,3 +188,4 @@ async def test_handle_non_text(mock_message):
     assert "Контент не распознан" in call_args
     assert "текстовое сообщение" in call_args
 
+

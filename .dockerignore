@@ -1,0 +1,45 @@
+# Environment and secrets
+.env
+.env.example
+
+# Virtual environments
+.venv/
+venv/
+.uv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed in container)
+README.md
+doc/
+
+# Tests (not needed in production container)
+tests/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Development tools
+Makefile
+
